@@ -118,7 +118,7 @@ export function ThreadView() {
       </div>
 
       {/* Sticky parent — lives OUTSIDE the scroll container so it never scrolls away */}
-      <div className="shrink-0 border-b border-gray-100 bg-white px-4 py-3">
+      <div className="shrink-0 bg-gray-100 px-4 py-3">
         <CommentCard
           comment={parentItem.comment}
           user={parentItem.user}
@@ -128,7 +128,6 @@ export function ThreadView() {
           allReactions={discussion!.reactions}
           allAttachments={discussion!.attachments}
           onReact={handleReact}
-          onReply={() => {}}
           onOpenThread={() => {}}
           users={users}
           currentUserId={CURRENT_USER_ID}
@@ -140,7 +139,7 @@ export function ThreadView() {
       <div ref={scrollRef} className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4">
         {replies.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
               <MessageSquare className="h-7 w-7 text-gray-400" />
             </div>
             <h3 className="text-sm font-semibold text-gray-900">No replies yet</h3>
@@ -159,7 +158,6 @@ export function ThreadView() {
                 allReactions={discussion!.reactions}
                 allAttachments={discussion!.attachments}
                 onReact={handleReact}
-                onReply={() => {}}
                 onOpenThread={() => {}}
                 users={users}
                 currentUserId={CURRENT_USER_ID}

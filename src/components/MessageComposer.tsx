@@ -274,7 +274,7 @@ export function MessageComposer({
             {showEmojiPicker && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setShowEmojiPicker(false)} />
-                <div className="emoji absolute bottom-full left-0 z-40 mb-2 grid grid-cols-5 gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                <div className="emoji absolute bottom-full left-0 z-40 mb-2 grid w-max min-w-[240px] grid-cols-5 gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
                   {EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
@@ -301,8 +301,7 @@ export function MessageComposer({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={1}
-          className="max-h-32 min-h-[36px] flex-1 resize-none bg-transparent py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none"
-          style={{ height: "auto" }}
+          className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none"
         />
 
         <button

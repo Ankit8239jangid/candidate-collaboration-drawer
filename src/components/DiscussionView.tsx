@@ -85,7 +85,7 @@ export function DiscussionView() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-gray-200">
       {/* Discussion Header */}
       <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
         <button
@@ -127,7 +127,6 @@ export function DiscussionView() {
                 allReactions={discussion.reactions}
                 allAttachments={discussion.attachments}
                 onReact={handleReact}
-                onReply={() => {}}
                 onOpenThread={openThread}
                 users={users}
                 currentUserId={CURRENT_USER_ID}

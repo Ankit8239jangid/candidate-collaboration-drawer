@@ -14,7 +14,6 @@ interface CommentCardProps {
   allReactions: Reaction[];
   allAttachments: Attachment[];
   onReact: (commentId: number, emoji: string) => void;
-  onReply: (content: string, mentions: number[] | null, attachments: { fileName: string; fileUrl: string; fileType: string; fileSize: number }[]) => void;
   onOpenThread?: (commentId: number) => void;
   users: User[];
   isReply?: boolean;
@@ -76,7 +75,6 @@ export function CommentCard({
   allReactions,
   allAttachments,
   onReact,
-  onReply,
   onOpenThread,
   users,
   isReply = false,
@@ -141,7 +139,7 @@ export function CommentCard({
                     : "Just now"}
                 </span>
                 {user?.role && !isMyComment && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  <span className="rounded-full  px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
                     {user.role}
                   </span>
                 )}

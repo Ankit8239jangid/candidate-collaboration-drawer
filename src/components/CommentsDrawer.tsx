@@ -30,7 +30,7 @@ export function CommentsDrawer() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "tween", duration: 0.25, ease: "easeInOut" }}
-            className="fixed right-0 top-0 z-50 h-full w-full bg-white shadow-2xl sm:w-[620px] lg:w-[720px]"
+            className="fixed right-0 top-0 z-50 h-full w-full bg-gray-200 shadow-2xl sm:w-[620px] lg:w-[720px]"
           >
             <div className="relative flex h-full flex-col">
               {/* Close button */}
