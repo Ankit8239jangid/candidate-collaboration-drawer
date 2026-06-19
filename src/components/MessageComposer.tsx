@@ -2,13 +2,49 @@
 
 import { useState, useRef, useCallback } from "react";
 import { User } from "@/data/dummyData";
-import { AtSign, Image, Smile, Send, X } from "lucide-react";
+import { AtSign, Paperclip, Smile, Send, X, FileText, FileSpreadsheet, FileArchive, File as FileIcon } from "lucide-react";
+
+interface LocalAttachment {
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+}
 
 interface MessageComposerProps {
   placeholder?: string;
   users: User[];
-  onSend: (content: string, mentions: number[] | null, attachments: { fileName: string; fileUrl: string; fileType: string; fileSize: number }[]) => void;
+  onSend: (content: string, mentions: number[] | null, attachments: LocalAttachment[]) => void;
   compact?: boolean;
+}
+
+const EMOJIS = ["👍", "❤️", "🔥", "😂", "👏", "👀", "🎉", "🤔", "✅", "🚀"];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif", "pdf", "doc", "docx", "xls", "xlsx", "zip", "txt"];
+
+function docIconFor(fileName: string, fileType: string) {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf" || fileType === "application/pdf") return FileText;
+  if (ext === "doc" || ext === "docx") return FileText;
+  if (ext === "xls" || ext === "xlsx") return FileSpreadsheet;
+  if (ext === "zip" || ext === "rar" || ext === "7z") return FileArchive;
+  return FileIcon;
+}
+
+function docColorFor(fileName: string, fileType: string) {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf" || fileType === "application/pdf") return "text-red-600";
+  if (ext === "doc" || ext === "docx") return "text-blue-600";
+  if (ext === "xls" || ext === "xlsx") return "text-green-600";
+  if (ext === "zip" || ext === "rar" || ext === "7z") return "text-amber-600";
+  return "text-gray-600";
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
 export function MessageComposer({
@@ -24,15 +60,37 @@ export function MessageComposer({
   const [mentionStart, setMentionStart] = useState(-1);
   const [selectedMentions, setSelectedMentions] = useState<number[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [localAttachments, setLocalAttachments] = useState<{ fileName: string; fileUrl: string; fileType: string; fileSize: number }[]>([]);
+  const [localAttachments, setLocalAttachments] = useState<LocalAttachment[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const EMOJIS = ["👍", "❤️", "🔥", "😂", "👏", "👀", "🎉", "🤔", "✅", "🚀"];
 
   const filteredUsers = users.filter((u) =>
     u.name.toLowerCase().includes(mentionQuery.toLowerCase())
   );
+
+  const ingestFiles = useCallback((fileList: FileList | null) => {
+    if (!fileList) return;
+    const incoming: LocalAttachment[] = [];
+    Array.from(fileList).forEach((file) => {
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`"${file.name}" is too large. Max 10MB.`);
+        return;
+      }
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        alert(`"${file.name}" is not a supported file type.`);
+        return;
+      }
+      incoming.push({
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        fileType: file.type || `application/${ext}`,
+        fileSize: file.size,
+      });
+    });
+    if (incoming.length) setLocalAttachments((prev) => [...prev, ...incoming]);
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -103,48 +161,17 @@ export function MessageComposer({
     [showMentions, filteredUsers, mentionIndex, content, localAttachments.length, insertMention]
   );
 
-  const handleSend = () => {
+  function handleSend() {
     if (!content.trim() && localAttachments.length === 0) return;
     onSend(content.trim(), selectedMentions.length > 0 ? selectedMentions : null, localAttachments);
     setContent("");
     setSelectedMentions([]);
+    localAttachments.forEach((a) => URL.revokeObjectURL(a.fileUrl));
     setLocalAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert("File too large. Max 10MB.");
-      return;
-    }
-
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      alert("Only PNG, JPG, JPEG, and WEBP files are allowed.");
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setLocalAttachments((prev) => [
-      ...prev,
-      {
-        fileName: file.name,
-        fileUrl: objectUrl,
-        fileType: file.type,
-        fileSize: file.size,
-      },
-    ]);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  }
 
   const removeAttachment = (index: number) => {
     setLocalAttachments((prev) => {
@@ -155,27 +182,70 @@ export function MessageComposer({
     });
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    ingestFiles(e.dataTransfer.files);
+  };
+
   return (
     <div className="relative">
-      {/* Attachments preview */}
+      {/* Attachment preview area — shown before sending */}
       {localAttachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
-          {localAttachments.map((att, i) => (
-            <div key={i} className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-              <img src={att.fileUrl} alt={att.fileName} className="h-8 w-8 rounded-lg object-cover" />
-              <span className="max-w-[100px] truncate text-xs text-gray-600">{att.fileName}</span>
-              <button
-                onClick={() => removeAttachment(i)}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          {localAttachments.map((att, i) => {
+            const isImage = att.fileType.startsWith("image/");
+            if (isImage) {
+              return (
+                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-xl border border-gray-200">
+                  <img src={att.fileUrl} alt={att.fileName} className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => removeAttachment(i)}
+                    className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              );
+            }
+            const Icon = docIconFor(att.fileName, att.fileType);
+            const color = docColorFor(att.fileName, att.fileType);
+            return (
+              <div key={i} className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-1.5 pl-2 pr-7">
+                <Icon className={`h-4 w-4 ${color}`} />
+                <div className="min-w-0">
+                  <p className="max-w-[120px] truncate text-xs font-medium text-gray-700">{att.fileName}</p>
+                  <p className="text-[10px] text-gray-400">{formatFileSize(att.fileSize)}</p>
+                </div>
+                <button
+                  onClick={() => removeAttachment(i)}
+                  className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div className={`relative flex items-end gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-2 transition-all focus-within:border-[#F76711] focus-within:bg-white focus-within:shadow-md focus-within:shadow-orange-50 ${compact ? "" : ""}`}>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDrop}
+        className={`relative flex items-end gap-2 rounded-2xl border bg-gray-50 p-2 transition-all focus-within:bg-white focus-within:shadow-md focus-within:shadow-orange-50 ${
+          isDragOver ? "border-brand bg-brand-50/40 ring-2 ring-brand/30" : "border-gray-200 focus-within:border-brand"
+        }`}
+      >
+        {isDragOver && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl text-sm font-medium text-brand">
+            Drop files to attach
+          </div>
+        )}
+
         <div className="flex items-center gap-0.5 pb-1.5">
           <button
             onClick={() => textareaRef.current?.focus()}
@@ -187,13 +257,15 @@ export function MessageComposer({
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-            title="Upload image"
+            title="Attach file"
           >
-            <Image className="h-4 w-4" />
+            <Paperclip className="h-4 w-4" />
           </button>
+
+          {/* Emoji button — popover anchored to its own wrapper, opens ABOVE the toolbar */}
           <div className="relative">
             <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={() => setShowEmojiPicker((v) => !v)}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               title="Emoji"
             >
@@ -201,8 +273,8 @@ export function MessageComposer({
             </button>
             {showEmojiPicker && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
-                <div className="absolute bottom-10 left-0 z-20 grid grid-cols-5 gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                <div className="fixed inset-0 z-30" onClick={() => setShowEmojiPicker(false)} />
+                <div className="emoji absolute bottom-full left-0 z-40 mb-2 grid grid-cols-5 gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
                   {EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
@@ -211,8 +283,7 @@ export function MessageComposer({
                         setShowEmojiPicker(false);
                         textareaRef.current?.focus();
                       }}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-xl leading-none transition-colors hover:bg-gray-100"
-                      style={{ fontFamily: "'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif" }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-xl leading-none transition-transform hover:scale-125 hover:bg-gray-100"
                     >
                       <span className="block">{emoji}</span>
                     </button>
@@ -237,7 +308,7 @@ export function MessageComposer({
         <button
           onClick={handleSend}
           disabled={!content.trim() && localAttachments.length === 0}
-          className="mb-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-[#F76711] text-white shadow-sm transition-all hover:bg-orange-600 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:hover:bg-[#F76711] disabled:active:scale-100"
+          className="mb-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white shadow-sm transition-all hover:bg-orange-600 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:hover:bg-brand disabled:active:scale-100"
         >
           <Send className="h-4 w-4" />
         </button>
@@ -245,23 +316,27 @@ export function MessageComposer({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
-          onChange={handleFileChange}
+          multiple
+          accept={ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
+          onChange={(e) => {
+            ingestFiles(e.target.files);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
           className="hidden"
         />
       </div>
 
       {/* Mention Dropdown */}
       {showMentions && filteredUsers.length > 0 && (
-        <div className="absolute bottom-full left-0 z-30 mb-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div className="absolute bottom-full left-0 z-40 mb-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
           <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Mention someone</div>
-          <div className="max-h-48 overflow-y-auto custom-scrollbar">
+          <div className="custom-scrollbar max-h-48 overflow-y-auto">
             {filteredUsers.map((user, i) => (
               <button
                 key={user.id}
                 onClick={() => insertMention(user)}
                 className={`flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors ${
-                  i === mentionIndex ? "bg-orange-50" : "hover:bg-gray-50"
+                  i === mentionIndex ? "bg-brand-50" : "hover:bg-gray-50"
                 }`}
               >
                 <img

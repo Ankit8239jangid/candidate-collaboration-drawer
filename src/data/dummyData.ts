@@ -54,6 +54,9 @@ export interface CommentWithUser {
   user: User;
 }
 
+/** The logged-in user for this session. Replace with real auth identity. */
+export const CURRENT_USER_ID = 1;
+
 export const users: User[] = [
   { id: 1, name: "John Recruiter", email: "john@seekhelpers.com", role: "recruiter", avatarUrl: "https://ui-avatars.com/api/?name=John+Recruiter&background=F76711&color=fff" },
   { id: 2, name: "Sarah Jenkins", email: "sarah@seekhelpers.com", role: "manager", avatarUrl: "https://ui-avatars.com/api/?name=Sarah+Jenkins&background=2563EB&color=fff" },

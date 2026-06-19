@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Brand theme token (Tailwind v4 CSS-first) — enables bg-brand / text-brand / border-brand / ring-brand */
+@theme {
+  --color-brand: #f76711;
+  --color-brand-50: #fff5ed;
+  --color-brand-100: #ffe7d4;
+}
+
+/* Emoji font stack utility — consistent emoji rendering without repeating inline styles */
+.emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
